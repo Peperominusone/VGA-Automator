@@ -1,5 +1,5 @@
 """
-Segmentation 기반 객체 인식 + 연결된 윤곽선 추출
+Segmentation-based object detection and connected contour extraction
 """
 import cv2
 import numpy as np
@@ -36,7 +36,7 @@ SANATLADKAT_CLASS_MAP = {
 
 @dataclass
 class SegmentedElement:
-    """세그먼테이션된 요소"""
+    """Segmented element from detection"""
     element_type: ElementType
     mask: np.ndarray
     contours: List[np.ndarray] = field(default_factory=list)
@@ -45,7 +45,7 @@ class SegmentedElement:
 
 
 class SegmentationDetector:
-    """Segmentation 기반 도면 요소 감지"""
+    """Segmentation-based floorplan element detector"""
     
     def __init__(self, model_path: str = "best.pt", confidence: float = 0.5, use_segmentation: bool = True):
         self.model_path = model_path
@@ -57,7 +57,7 @@ class SegmentationDetector:
     def _load_model(self):
         from ultralytics import YOLO
         if not Path(self.model_path).exists():
-            raise FileNotFoundError(f"모델 파일 없음: {self.model_path}")
+            raise FileNotFoundError(f"Model file not found: {self.model_path}")
         self.model = YOLO(self.model_path)
     
     def detect_with_masks(self, image: np.ndarray, binary: np.ndarray, target_classes: List[str] = None) -> Dict[ElementType, SegmentedElement]:
@@ -192,7 +192,7 @@ class SegmentationDetector:
 
 
 class ContinuousWallExtractor:
-    """벽체 전용 - 완전히 연결된 벽체선 추출"""
+    """Wall-specific extractor - extracts fully connected wall lines"""
     
     def __init__(self):
         self.detector = None

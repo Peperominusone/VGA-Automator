@@ -1,5 +1,5 @@
 """
-연결된 폴리라인을 DXF로 내보내기
+Export connected polylines to DXF format
 """
 import ezdxf
 from ezdxf import colors
@@ -11,9 +11,9 @@ from .segmentation_detector import SegmentedElement, ElementType
 
 
 class DXFExporterContinuous:
-    """연결된 벽체선을 DXF로 내보내기"""
+    """Exports connected wall lines to DXF format"""
     
-    # Element type별 레이어 및 색상 설정
+    # Layer and color configuration per element type
     LAYER_CONFIG = {
         ElementType.WALL: {
             'name': 'WALLS',
@@ -64,42 +64,42 @@ class DXFExporterContinuous:
         self._setup_layers()
     
     def _setup_layers(self):
-        """레이어 생성 및 설정"""
+        """Create and configure layers"""
         for elem_type, config in self.LAYER_CONFIG.items():
             layer = self.doc.layers.add(config['name'])
             layer.color = config['color']
             layer.linetype = config['linetype']
     
     def export_elements(self, elements: Dict[ElementType, SegmentedElement], image_height: int = None):
-        """모든 요소를 DXF로 내보내기"""
+        """Export all elements to DXF"""
         for elem_type, element in elements.items():
             layer_name = self.LAYER_CONFIG[elem_type]['name']
             
             if elem_type == ElementType.WALL:
-                # 벽체는 폴리라인으로 내보내기
+                # Export walls as polylines
                 self._export_polylines(element.polylines, layer_name, image_height)
             else:
-                # 기타 요소는 윤곽선으로 내보내기
+                # Export other elements as contours
                 self._export_contours(element.contours, layer_name, image_height)
     
     def _export_polylines(self, polylines: List[List[Tuple[float, float]]], layer_name: str, image_height: int = None):
-        """폴리라인을 DXF로 내보내기"""
+        """Export polylines to DXF"""
         for polyline in polylines:
             if len(polyline) < 2:
                 continue
             
             points = []
             for x, y in polyline:
-                # Y축 반전 (이미지 좌표 -> CAD 좌표)
+                # Flip Y-axis (image coords -> CAD coords)
                 if image_height is not None:
                     y = image_height - y
                 points.append((x, y))
             
-            # LWPOLYLINE으로 추가 (경량 폴리라인)
+            # Add as LWPOLYLINE (lightweight polyline)
             self.msp.add_lwpolyline(points, dxfattribs={'layer': layer_name})
     
     def _export_contours(self, contours: List[np.ndarray], layer_name: str, image_height: int = None):
-        """윤곽선을 DXF로 내보내기"""
+        """Export contours to DXF"""
         for contour in contours:
             if len(contour) < 2:
                 continue
@@ -107,16 +107,16 @@ class DXFExporterContinuous:
             points = []
             for point in contour:
                 x, y = float(point[0][0]), float(point[0][1])
-                # Y축 반전
+                # Flip Y-axis
                 if image_height is not None:
                     y = image_height - y
                 points.append((x, y))
             
-            # 닫힌 폴리라인으로 추가
+            # Add as closed polyline
             self.msp.add_lwpolyline(points, close=True, dxfattribs={'layer': layer_name})
     
     def save(self):
-        """DXF 파일 저장"""
+        """Save DXF file"""
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
         self.doc.saveas(self.output_path)
-        print(f"✓ DXF 파일 저장: {self.output_path}")
+        print(f"✓ DXF file saved: {self.output_path}")
