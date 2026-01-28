@@ -117,7 +117,8 @@ class FloorPlanDetector:
                         # Resize mask to match image dimensions
                         mask = cv2.resize(mask, (image.shape[1], image.shape[0]))
                         detection['mask'] = (mask > 0.5).astype(np.uint8) * 255
-                    except:
+                    except (IndexError, AttributeError, ValueError) as e:
+                        # Mask extraction failed, continue without mask
                         pass
                 
                 detections.append(detection)
@@ -138,6 +139,13 @@ class FloorPlanDetector:
             List of contours
         """
         x1, y1, x2, y2 = detection['bbox']
+        
+        # Validate bbox coordinates
+        h, w = image.shape[:2]
+        x1 = max(0, min(x1, w - 1))
+        y1 = max(0, min(y1, h - 1))
+        x2 = max(x1 + 1, min(x2, w))
+        y2 = max(y1 + 1, min(y2, h))
         
         # Use mask if available
         if detection['mask'] is not None:
@@ -188,6 +196,13 @@ class FloorPlanDetector:
             
             x1, y1, x2, y2 = detection['bbox']
             
+            # Validate bbox coordinates
+            h, w = image.shape[:2]
+            x1 = max(0, min(x1, w - 1))
+            y1 = max(0, min(y1, h - 1))
+            x2 = max(x1 + 1, min(x2, w))
+            y2 = max(y1 + 1, min(y2, h))
+            
             # Extract region
             if detection['mask'] is not None:
                 roi = detection['mask'][y1:y2, x1:x2]
@@ -198,6 +213,10 @@ class FloorPlanDetector:
             
             # Apply edge detection
             edges = cv2.Canny(roi, 50, 150, apertureSize=3)
+            
+            # Check if ROI is valid
+            if edges.size == 0:
+                continue
             
             # Detect lines using Hough transform
             detected_lines = cv2.HoughLinesP(

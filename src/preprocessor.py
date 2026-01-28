@@ -14,6 +14,10 @@ import os
 class Preprocessor:
     """Image preprocessor for floor plan images"""
     
+    # Denoising parameters
+    DENOISE_TEMPLATE_WINDOW = 7
+    DENOISE_SEARCH_WINDOW = 21
+    
     def __init__(self):
         self.original_image = None
         self.processed_image = None
@@ -94,15 +98,23 @@ class Preprocessor:
         """
         if len(image.shape) == 3:
             # Color image
-            denoised = cv2.fastNlMeansDenoisingColored(image, None, h, h, 7, 21)
+            denoised = cv2.fastNlMeansDenoisingColored(
+                image, None, h, h, 
+                self.DENOISE_TEMPLATE_WINDOW, 
+                self.DENOISE_SEARCH_WINDOW
+            )
         else:
             # Grayscale image
-            denoised = cv2.fastNlMeansDenoising(image, None, h, 7, 21)
+            denoised = cv2.fastNlMeansDenoising(
+                image, None, h, 
+                self.DENOISE_TEMPLATE_WINDOW, 
+                self.DENOISE_SEARCH_WINDOW
+            )
         
         return denoised
     
     def binarize(self, image: np.ndarray, method: str = 'adaptive', 
-                 threshold: int = 127, block_size: int = 11, C: int = 2) -> np.ndarray:
+                 threshold: int = 127, block_size: int = 11, constant: int = 2) -> np.ndarray:
         """
         Binarize image using thresholding
         
@@ -110,8 +122,8 @@ class Preprocessor:
             image: Input grayscale image
             method: 'adaptive' or 'otsu' or 'simple'
             threshold: Threshold value for simple thresholding
-            block_size: Block size for adaptive thresholding (must be odd)
-            C: Constant subtracted from mean in adaptive thresholding
+            block_size: Block size for adaptive thresholding (must be odd and > 1)
+            constant: Constant subtracted from mean in adaptive thresholding
             
         Returns:
             Binary image
@@ -120,9 +132,13 @@ class Preprocessor:
             image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         
         if method == 'adaptive':
+            # Validate block_size
+            if block_size < 3 or block_size % 2 == 0:
+                raise ValueError(f"block_size must be odd and >= 3, got {block_size}")
+            
             binary = cv2.adaptiveThreshold(
                 image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                cv2.THRESH_BINARY, block_size, C
+                cv2.THRESH_BINARY, block_size, constant
             )
         elif method == 'otsu':
             _, binary = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)

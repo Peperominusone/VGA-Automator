@@ -24,7 +24,7 @@ class DXFExporter:
         'SLIDING_DOOR': {'color': colors.RED, 'linetype': 'Continuous'},
         'STAIR': {'color': 7, 'linetype': 'Continuous'},  # Gray
         'BOUNDARY': {'color': colors.RED, 'linetype': 'Continuous'},
-        'OPENING': {'color': colors.GREEN, 'linetype': 'DASHED'},
+        'OPENING': {'color': colors.GREEN, 'linetype': 'Continuous'},  # Changed from DASHED
     }
     
     def __init__(self, image_height: int = 0, scale_factor: float = 1.0):
@@ -207,6 +207,14 @@ class DXFExporter:
                 import cv2
                 mask = detection['mask']
                 x1, y1, x2, y2 = bbox
+                
+                # Validate bbox coordinates against mask dimensions
+                h, w = mask.shape[:2]
+                x1 = max(0, min(x1, w - 1))
+                y1 = max(0, min(y1, h - 1))
+                x2 = max(x1 + 1, min(x2, w))
+                y2 = max(y1 + 1, min(y2, h))
+                
                 roi = mask[y1:y2, x1:x2]
                 
                 # Find contours in mask

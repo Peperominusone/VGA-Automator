@@ -214,11 +214,10 @@ class ContourExtractor:
                 
                 if angle_diff <= angle_threshold:
                     # Check if lines are close
-                    x1, y1, _, _ = line2
-                    x2, _, y2, _ = line2
+                    x1_l2, y1_l2, x2_l2, y2_l2 = line2
                     
-                    dist1 = point_to_line_distance((x1, y1), line1)
-                    dist2 = point_to_line_distance((x2, y2), line1)
+                    dist1 = point_to_line_distance((x1_l2, y1_l2), line1)
+                    dist2 = point_to_line_distance((x2_l2, y2_l2), line1)
                     
                     if dist1 <= distance_threshold or dist2 <= distance_threshold:
                         similar_lines.append(line2)
@@ -242,20 +241,29 @@ class ContourExtractor:
                 
                 if len(centered) > 1:
                     cov = np.cov(centered.T)
-                    eigenvalues, eigenvectors = np.linalg.eig(cov)
                     
-                    # Principal direction
-                    principal_dir = eigenvectors[:, np.argmax(eigenvalues)]
-                    
-                    # Project points onto principal direction
-                    projections = np.dot(centered, principal_dir)
-                    
-                    # Find extreme projections
-                    min_idx = np.argmin(projections)
-                    max_idx = np.argmax(projections)
-                    
-                    p1 = all_points[min_idx]
-                    p2 = all_points[max_idx]
+                    # Check if covariance matrix is valid
+                    if np.linalg.matrix_rank(cov) < 2:
+                        # Degenerate case: all points are collinear
+                        # Just use the extreme points along the first dimension
+                        idx_sort = np.argsort(centered[:, 0])
+                        p1 = all_points[idx_sort[0]]
+                        p2 = all_points[idx_sort[-1]]
+                    else:
+                        eigenvalues, eigenvectors = np.linalg.eig(cov)
+                        
+                        # Principal direction
+                        principal_dir = eigenvectors[:, np.argmax(eigenvalues)]
+                        
+                        # Project points onto principal direction
+                        projections = np.dot(centered, principal_dir)
+                        
+                        # Find extreme projections
+                        min_idx = np.argmin(projections)
+                        max_idx = np.argmax(projections)
+                        
+                        p1 = all_points[min_idx]
+                        p2 = all_points[max_idx]
                     
                     merged.append((int(p1[0]), int(p1[1]), int(p2[0]), int(p2[1])))
                 else:
