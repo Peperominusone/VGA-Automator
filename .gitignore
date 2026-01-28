@@ -46,6 +46,7 @@ models/
 *.dxf
 output/
 results/
+debug_output/
 
 # Sample files (optional)
 # samples/*.png
