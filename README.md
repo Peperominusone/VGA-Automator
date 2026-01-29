@@ -1,27 +1,53 @@
 # VGA-Automator
-Floorplan to DXF converter using AI-powered segmentation
 
-## 개요
+건축 도면을 Space Syntax VGA 분석용 DXF 파일로 자동 변환하는 도구
 
-VGA-Automator는 건축 도면 이미지를 DXF 파일로 자동 변환하는 도구입니다. YOLO segmentation 모델을 사용하여 벽체, 문, 창문 등의 건축 요소를 정확하게 감지하고 추출합니다.
+Automatically convert architectural floor plans to DXF files for Space Syntax VGA (Visibility Graph Analysis)
 
-## 주요 기능
+---
 
-### Segmentation 기반 연결된 벽체선 추출
+## 📋 목차 / Table of Contents
 
-1. **Segmentation 기반 감지**: 바운딩 박스 대신 픽셀 단위 마스크로 정확한 형태 추출
-2. **연결된 세그먼트**: 끊어진 벽체를 모폴로지 연산으로 연결
-3. **골격화(Skeletonize)**: 벽체 마스크에서 중심선 추출
-4. **폴리라인 병합**: 끝점이 가까운 선분들을 하나로 연결
+- [한국어](#korean)
+- [English](#english)
 
-## 설치
+---
 
-### 요구사항
+<a name="korean"></a>
+## 🇰🇷 한국어
 
-- Python 3.8 이상
-- YOLO segmentation 모델 파일 (`best.pt`)
+### 프로젝트 개요
 
-### 의존성 설치
+VGA-Automator는 건축 도면 이미지(PNG/JPG/PDF)를 Space Syntax VGA(Visibility Graph Analysis) 분석을 위한 DXF 파일로 자동 변환하는 도구입니다. YOLOv8 기반 객체 인식을 통해 벽체, 문, 창문, 기둥 등을 감지하고 정밀한 DXF 파일을 생성합니다.
+
+### 주요 기능
+
+1. **이미지 전처리**: 도면 로드, 노이즈 제거, 이진화
+2. **객체 인식**: YOLOv8 모델을 활용한 벽체, 문, 창문, 기둥 등 인식
+3. **윤곽선 추출**: 감지된 요소에서 정밀한 라인 추출
+4. **DXF 내보내기**: 레이어별로 구분된 AutoCAD 호환 DXF 파일 생성
+
+### 감지 가능한 객체
+
+- Wall (벽체)
+- Door (문)
+- Window (창문)
+- Column (기둥)
+- Curtain Wall (커튼월)
+- Railing (난간)
+- Sliding Door (미닫이문)
+- Stair Case (계단)
+
+### 설치 방법
+
+#### 1. 저장소 클론
+
+```bash
+git clone https://github.com/Peperominusone/VGA-Automator.git
+cd VGA-Automator
+```
+
+#### 2. 의존성 패키지 설치
 
 ```bash
 pip install -r requirements.txt

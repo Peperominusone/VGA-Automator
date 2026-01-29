@@ -24,6 +24,10 @@ wheels/
 venv/
 ENV/
 env/
+# Virtual Environment
+venv/
+env/
+ENV/
 .venv
 
 # IDE
@@ -52,3 +56,30 @@ output_*.dxf
 # Temporary files
 tmp/
 temp/
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# YOLO model files
+best.pt
+*.pt
+models/
+
+# Output files
+*.dxf
+output/
+results/
+debug_output/
+
+# Sample files (optional)
+# samples/*.png
+# samples/*.jpg
+# samples/*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
