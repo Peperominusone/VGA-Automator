@@ -109,7 +109,7 @@ class ConversionWorker(QThread):
         try:
             from src.preprocessor import Preprocessor
             from src.segmentation_detector import ContinuousWallExtractor, ElementType
-            from src.dxf_exporter_continuous import , DXFConfig
+            from src.dxf_exporter_continuous import DXFConfig
             
             stats = {'walls': 0, 'doors': 0, 'windows': 0}
             
