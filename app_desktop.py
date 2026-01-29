@@ -259,9 +259,9 @@ class ResultPanel(QGroupBox):
         self.status_label.setText(message)
     
     def clear(self):
-        self.wall_label.setText("벽체: -")
-        self.door_label.setText("문: -")
-        self.window_label.setText("창문: -")
+        self.wall_label.setText("🧱 벽체: -")
+        self.door_label.setText("🚪 문: -")
+        self.window_label.setText("🪟 창문: -")
         self.status_label.setText("")
 
 
@@ -408,13 +408,33 @@ class VGAAutomatorApp(QMainWindow):
         pixmap = QPixmap(file_path)
         if not pixmap.isNull():
             self.drop_zone.set_preview(pixmap, Path(file_path).name)
-        
-        # 파일 정보
-        file_size = Path(file_path).stat().st_size / 1024  # KB
-        self.file_info_label.setText(
-            f"📄 {Path(file_path).name} ({file_size:.1f} KB) | "
-            f"📐 {pixmap.width()} x {pixmap.height()} px"
-        )
+            
+            # 파일 정보
+            file_size = Path(file_path).stat().st_size / 1024  # KB
+            self.file_info_label.setText(
+                f"📄 {Path(file_path).name} ({file_size:.1f} KB) | "
+                f"📐 {pixmap.width()} x {pixmap.height()} px"
+            )
+        else:
+            # PDF 또는 읽을 수 없는 이미지
+            file_size = Path(file_path).stat().st_size / 1024  # KB
+            file_ext = Path(file_path).suffix.upper()
+            if file_ext == '.PDF':
+                self.file_info_label.setText(
+                    f"📄 {Path(file_path).name} ({file_size:.1f} KB) | "
+                    f"PDF 파일 (미리보기 불가)"
+                )
+            else:
+                self.file_info_label.setText(
+                    f"📄 {Path(file_path).name} ({file_size:.1f} KB) | "
+                    f"⚠️ 이미지를 읽을 수 없습니다"
+                )
+                QMessageBox.warning(
+                    self,
+                    "이미지 로드 실패",
+                    f"이미지 파일을 읽을 수 없습니다.\n다른 파일을 선택해주세요."
+                )
+                return
         
         self.convert_btn.setEnabled(True)
         self.result_panel.clear()
@@ -472,6 +492,11 @@ class VGAAutomatorApp(QMainWindow):
         
         self.statusBar().showMessage(f"변환 완료: {output_path}")
         
+        # 워커 정리
+        if self.worker:
+            self.worker.deleteLater()
+            self.worker = None
+        
         # 완료 메시지
         reply = QMessageBox.information(
             self,
@@ -490,12 +515,19 @@ class VGAAutomatorApp(QMainWindow):
             import platform
             
             folder = str(Path(output_path).parent)
-            if platform.system() == "Windows":
-                subprocess.run(["explorer", folder])
-            elif platform.system() == "Darwin":  # macOS
-                subprocess.run(["open", folder])
-            else:  # Linux
-                subprocess.run(["xdg-open", folder])
+            try:
+                if platform.system() == "Windows":
+                    subprocess.run(["explorer", folder], check=True)
+                elif platform.system() == "Darwin":  # macOS
+                    subprocess.run(["open", folder], check=True)
+                else:  # Linux
+                    subprocess.run(["xdg-open", folder], check=True)
+            except (subprocess.CalledProcessError, FileNotFoundError) as e:
+                QMessageBox.warning(
+                    self,
+                    "폴더 열기 실패",
+                    f"파일 탐색기를 열 수 없습니다.\n수동으로 폴더를 열어주세요:\n{folder}"
+                )
     
     def on_error(self, error_msg: str):
         """오류 발생"""
@@ -505,6 +537,11 @@ class VGAAutomatorApp(QMainWindow):
         
         self.result_panel.set_status(f"❌ 오류 발생", is_error=True)
         self.statusBar().showMessage("오류 발생")
+        
+        # 워커 정리
+        if self.worker:
+            self.worker.deleteLater()
+            self.worker = None
         
         QMessageBox.critical(self, "오류", error_msg)
     
@@ -520,7 +557,11 @@ class VGAAutomatorApp(QMainWindow):
             if reply == QMessageBox.StandardButton.No:
                 event.ignore()
                 return
-            self.worker.terminate()
+            # 워커 종료 및 대기
+            self.worker.requestInterruption()
+            if not self.worker.wait(2000):  # 2초 대기
+                self.worker.terminate()
+                self.worker.wait()
         event.accept()
 
 
