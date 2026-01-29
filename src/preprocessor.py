@@ -220,7 +220,7 @@ class Preprocessor:
         )
         
         self.processed_image = cleaned
-        return cleaned
+        return {"binary" : cleaned}
     
     def save_image(self, image: np.ndarray, output_path: Union[str, Path]):
         """
