@@ -130,6 +130,9 @@ class ConversionWorker(QThread):
                 model_path=self.settings.get('model_path', 'best.pt'),
                 confidence=self.settings.get('confidence', 0.5)
             )
+
+            print("elements type:", type(elements))
+            print("elements keys:", elements.keys())
             
             # 통계 수집
             self.progress.emit(70, "윤곽선 처리 중...")
