@@ -141,16 +141,15 @@ class ConversionWorker(QThread):
                 elif elem_type == ElementType.WINDOW and element.contours:
                     stats['windows'] = len(element.contours)
             
-            # 3. DXF 생성
+           # 3. DXF 생성
             self.progress.emit(85, "DXF 파일 생성 중...")
             h, w = image.shape[:2]
-            exporter = DXFExporterContinuous(scale=self.settings.get('scale', 1.0))
-            exporter.create_document(h)
-            exporter.add_all_elements(elements)
+            exporter = DXFExporterContinuous(self.output_path)  # 참고: 생성자에서 output_path 필요
+            exporter.export_elements(elements, image_height=h)
             
             # 저장
             self.progress.emit(95, "파일 저장 중...")
-            exporter.save(self.output_path)
+            exporter.save()
             
             self.progress.emit(100, "완료!")
             self.finished.emit(self.output_path, stats)
