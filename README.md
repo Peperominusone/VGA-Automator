@@ -53,304 +53,67 @@ cd VGA-Automator
 pip install -r requirements.txt
 ```
 
-#### 3. YOLOv8 모델 다운로드
+## 사용법
 
-본 프로젝트는 [sanatladkat/floor-plan-object-detection](https://github.com/sanatladkat/floor-plan-object-detection) 모델을 사용합니다.
-
-1. 저장소를 방문하여 `best.pt` 모델 파일을 다운로드
-2. 다운로드한 `best.pt` 파일을 프로젝트 루트 디렉토리에 배치
-
-또는 다음 명령어로 직접 다운로드:
+### 기본 사용
 
 ```bash
-# 모델 다운로드 예시 (실제 URL은 저장소에서 확인)
-wget https://github.com/sanatladkat/floor-plan-object-detection/raw/main/best.pt
+python main_continuous.py floorplan.png -o output.dxf
 ```
 
-### 사용 방법
-
-#### 기본 사용법
+### 고급 옵션
 
 ```bash
-python main.py input_floorplan.png -o output.dxf
+# 모델 및 신뢰도 설정
+python main_continuous.py floorplan.png -o output.dxf --model custom_model.pt --confidence 0.6
+
+# 갭 연결 크기 조정
+python main_continuous.py floorplan.png -o output.dxf --gap 15
+
+# 디버그 이미지 생성
+python main_continuous.py floorplan.png -o output.dxf --debug
 ```
 
-#### 고급 옵션
+### 명령행 옵션
 
-```bash
-python main.py input_floorplan.jpg -o output.dxf \
-    --confidence 0.5 \
-    --scale 10.0 \
-    --debug
+- `input`: 입력 도면 이미지 경로 (필수)
+- `-o, --output`: 출력 DXF 파일 경로 (필수)
+- `--model`: YOLO 모델 파일 경로 (기본값: best.pt)
+- `--confidence`: 감지 신뢰도 임계값 (기본값: 0.5)
+- `--gap`: 연결할 갭 크기 (기본값: 10)
+- `--debug`: 디버그 이미지 저장
+
+## 알고리즘 흐름
+
+```
+원본 도면 → YOLO 감지 → 클래스별 마스크 병합 → 갭 연결 (모폴로지)
+    → 골격화 (Skeletonize) → 폴리라인 변환 → 끝점 병합 → DXF 저장
 ```
 
-#### 명령줄 옵션
+## 지원 요소
 
-- `input`: 입력 도면 이미지 (PNG, JPG, PDF)
-- `-o, --output`: 출력 DXF 파일 경로 (기본값: output.dxf)
-- `--model`: YOLOv8 모델 파일 경로 (기본값: best.pt)
-- `--confidence`: 객체 감지 신뢰도 임계값 (기본값: 0.5)
-- `--scale`: 픽셀-CAD 단위 변환 스케일 (기본값: 1.0)
-- `--denoise`: 노이즈 제거 강도 (기본값: 10)
-- `--doors-as-walls`: 문을 개구부가 아닌 벽으로 처리
-- `--bbox-only`: 상세 윤곽선 대신 바운딩 박스 사용
-- `--debug`: 중간 과정 이미지 저장
-- `--no-detection`: 객체 감지 건너뛰고 윤곽선만 추출
+- 벽체 (Wall) - 폴리라인으로 변환
+- 문 (Door)
+- 창문 (Window)
+- 기둥 (Column)
+- 슬라이딩 도어 (Sliding Door)
+- 계단 (Stair Case)
+- 커튼월 (Curtain Wall)
+- 난간 (Railing)
 
-#### 예제
-
-```bash
-# 기본 변환
-python main.py samples/floorplan.png -o output/result.dxf
-
-# 디버그 모드로 중간 과정 확인
-python main.py samples/floorplan.jpg -o output/result.dxf --debug
-
-# PDF 도면 처리
-python main.py samples/floorplan.pdf -o output/result.dxf --scale 10
-
-# 객체 감지 없이 윤곽선만 추출
-python main.py samples/floorplan.png -o output/result.dxf --no-detection
-```
-
-### 프로젝트 구조
+## 프로젝트 구조
 
 ```
 VGA-Automator/
-├── README.md                 # 프로젝트 설명
-├── requirements.txt          # 의존성 패키지
-├── main.py                   # CLI 메인 진입점
 ├── src/
-│   ├── __init__.py          
-│   ├── preprocessor.py       # 이미지 전처리 모듈
-│   ├── detector.py           # YOLOv8 기반 객체 인식
-│   ├── contour_extractor.py  # 윤곽선 추출 및 단순화
-│   └── dxf_exporter.py       # DXF 파일 생성
-├── notebooks/
-│   └── colab_demo.ipynb      # Google Colab 데모
-├── samples/                  # 샘플 도면 폴더
-└── .gitignore
+│   ├── __init__.py
+│   ├── segmentation_detector.py      # Segmentation 기반 요소 감지
+│   └── dxf_exporter_continuous.py    # DXF 내보내기
+├── main_continuous.py                 # CLI 진입점
+├── requirements.txt                   # 의존성
+└── README.md
 ```
 
-### DXF 레이어 구조
-
-생성된 DXF 파일은 다음과 같은 레이어로 구성됩니다:
-
-- `WALL`: 벽체 (흰색)
-- `DOOR`: 문 (파란색) 
-- `WINDOW`: 창문 (청록색)
-- `COLUMN`: 기둥 (마젠타)
-- `CURTAIN_WALL`: 커튼월 (녹색)
-- `RAILING`: 난간 (노란색)
-- `SLIDING_DOOR`: 미닫이문 (빨간색)
-- `STAIR`: 계단 (회색)
-- `OPENING`: 개구부 (녹색 점선) - 문을 개구부로 처리할 때
-- `BOUNDARY`: 경계 (빨간색)
-
-### VGA 분석 도구 연동
-
-생성된 DXF 파일은 다음 도구에서 사용할 수 있습니다:
-
-1. **depthmapX**: Space Syntax VGA 분석 전문 도구
-   - https://github.com/SpaceGroupUCL/depthmapX
-   
-2. **AutoCAD / DraftSight**: DXF 파일 편집 및 검증
-
-3. **QGIS**: 공간 분석 및 시각화
-
-### Google Colab 데모
-
-모델 다운로드부터 DXF 변환까지 전 과정을 Google Colab에서 실행할 수 있습니다:
-
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](notebooks/colab_demo.ipynb)
-
-### 기술 스택
-
-- **Python 3.8+**
-- **OpenCV**: 이미지 전처리 및 윤곽선 추출
-- **ultralytics (YOLOv8)**: 객체 인식
-- **ezdxf**: DXF 파일 생성
-- **NumPy, Pillow**: 이미지 처리
-- **pdf2image**: PDF 지원 (선택사항)
-
-### 라이선스
+## 라이센스
 
 MIT License
-
-### 참고 자료
-
-- YOLOv8 모델 출처: [sanatladkat/floor-plan-object-detection](https://github.com/sanatladkat/floor-plan-object-detection)
-- Space Syntax: [UCL Space Syntax](https://www.spacesyntax.net/)
-- depthmapX: [SpaceGroupUCL/depthmapX](https://github.com/SpaceGroupUCL/depthmapX)
-
----
-
-<a name="english"></a>
-## 🇬🇧 English
-
-### Project Overview
-
-VGA-Automator is a tool that automatically converts architectural floor plan images (PNG/JPG/PDF) into DXF files for Space Syntax VGA (Visibility Graph Analysis). It uses YOLOv8-based object detection to identify walls, doors, windows, columns, and generates precise DXF files.
-
-### Key Features
-
-1. **Image Preprocessing**: Load, denoise, and binarize floor plans
-2. **Object Detection**: Detect walls, doors, windows, columns using YOLOv8
-3. **Contour Extraction**: Extract precise lines from detected elements
-4. **DXF Export**: Generate layer-separated AutoCAD-compatible DXF files
-
-### Detectable Objects
-
-- Wall
-- Door
-- Window
-- Column
-- Curtain Wall
-- Railing
-- Sliding Door
-- Stair Case
-
-### Installation
-
-#### 1. Clone Repository
-
-```bash
-git clone https://github.com/Peperominusone/VGA-Automator.git
-cd VGA-Automator
-```
-
-#### 2. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-#### 3. Download YOLOv8 Model
-
-This project uses the [sanatladkat/floor-plan-object-detection](https://github.com/sanatladkat/floor-plan-object-detection) model.
-
-1. Visit the repository and download the `best.pt` model file
-2. Place the downloaded `best.pt` file in the project root directory
-
-Or download directly:
-
-```bash
-# Example download command (check repository for actual URL)
-wget https://github.com/sanatladkat/floor-plan-object-detection/raw/main/best.pt
-```
-
-### Usage
-
-#### Basic Usage
-
-```bash
-python main.py input_floorplan.png -o output.dxf
-```
-
-#### Advanced Options
-
-```bash
-python main.py input_floorplan.jpg -o output.dxf \
-    --confidence 0.5 \
-    --scale 10.0 \
-    --debug
-```
-
-#### Command Line Options
-
-- `input`: Input floor plan image (PNG, JPG, PDF)
-- `-o, --output`: Output DXF file path (default: output.dxf)
-- `--model`: YOLOv8 model file path (default: best.pt)
-- `--confidence`: Detection confidence threshold (default: 0.5)
-- `--scale`: Pixel to CAD unit scale factor (default: 1.0)
-- `--denoise`: Denoising strength (default: 10)
-- `--doors-as-walls`: Treat doors as walls instead of openings
-- `--bbox-only`: Use bounding boxes instead of detailed contours
-- `--debug`: Save intermediate debug images
-- `--no-detection`: Skip object detection, extract contours only
-
-#### Examples
-
-```bash
-# Basic conversion
-python main.py samples/floorplan.png -o output/result.dxf
-
-# Debug mode to check intermediate steps
-python main.py samples/floorplan.jpg -o output/result.dxf --debug
-
-# Process PDF floor plan
-python main.py samples/floorplan.pdf -o output/result.dxf --scale 10
-
-# Extract contours without object detection
-python main.py samples/floorplan.png -o output/result.dxf --no-detection
-```
-
-### Project Structure
-
-```
-VGA-Automator/
-├── README.md                 # Project documentation
-├── requirements.txt          # Dependencies
-├── main.py                   # CLI main entry point
-├── src/
-│   ├── __init__.py          
-│   ├── preprocessor.py       # Image preprocessing module
-│   ├── detector.py           # YOLOv8-based object detection
-│   ├── contour_extractor.py  # Contour extraction and simplification
-│   └── dxf_exporter.py       # DXF file generation
-├── notebooks/
-│   └── colab_demo.ipynb      # Google Colab demo
-├── samples/                  # Sample floor plans
-└── .gitignore
-```
-
-### DXF Layer Structure
-
-Generated DXF files are organized into layers:
-
-- `WALL`: Walls (white)
-- `DOOR`: Doors (blue)
-- `WINDOW`: Windows (cyan)
-- `COLUMN`: Columns (magenta)
-- `CURTAIN_WALL`: Curtain walls (green)
-- `RAILING`: Railings (yellow)
-- `SLIDING_DOOR`: Sliding doors (red)
-- `STAIR`: Stairs (gray)
-- `OPENING`: Openings (green dashed) - when doors are treated as openings
-- `BOUNDARY`: Boundaries (red)
-
-### VGA Analysis Tool Integration
-
-The generated DXF files can be used with:
-
-1. **depthmapX**: Professional Space Syntax VGA analysis tool
-   - https://github.com/SpaceGroupUCL/depthmapX
-   
-2. **AutoCAD / DraftSight**: DXF file editing and validation
-
-3. **QGIS**: Spatial analysis and visualization
-
-### Google Colab Demo
-
-Run the complete pipeline from model download to DXF conversion in Google Colab:
-
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](notebooks/colab_demo.ipynb)
-
-### Tech Stack
-
-- **Python 3.8+**
-- **OpenCV**: Image preprocessing and contour extraction
-- **ultralytics (YOLOv8)**: Object detection
-- **ezdxf**: DXF file generation
-- **NumPy, Pillow**: Image processing
-- **pdf2image**: PDF support (optional)
-
-### License
-
-MIT License
-
-### References
-
-- YOLOv8 Model: [sanatladkat/floor-plan-object-detection](https://github.com/sanatladkat/floor-plan-object-detection)
-- Space Syntax: [UCL Space Syntax](https://www.spacesyntax.net/)
-- depthmapX: [SpaceGroupUCL/depthmapX](https://github.com/SpaceGroupUCL/depthmapX)
