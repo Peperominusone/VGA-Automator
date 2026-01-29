@@ -25,6 +25,9 @@ MANIFEST
 
 # PyQt
 *.ui.autosave
+*.egg-info/
+.installed.cfg
+*.egg
 
 # Virtual Environment
 venv/
@@ -32,6 +35,7 @@ env/
 ENV/
 env.bak/
 venv.bak/
+.venv
 
 # IDE
 .vscode/
@@ -52,3 +56,30 @@ best.pt
 debug/
 output/
 *.dxf
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb_checkpoints/
+
+# YOLO model files
+best.pt
+*.pt
+models/
+
+# Output files
+*.dxf
+output/
+results/
+debug_output/
+
+# Sample files (optional)
+# samples/*.png
+# samples/*.jpg
+# samples/*.pdf
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
