@@ -109,7 +109,7 @@ class ConversionWorker(QThread):
         try:
             from src.preprocessor import Preprocessor
             from src.segmentation_detector import ContinuousWallExtractor, ElementType
-            from src.dxf_exporter_continuous import ContinuousDXFExporter, DXFConfig
+            from src.dxf_exporter_continuous import , DXFConfig
             
             stats = {'walls': 0, 'doors': 0, 'windows': 0}
             
@@ -145,7 +145,7 @@ class ConversionWorker(QThread):
             self.progress.emit(85, "DXF 파일 생성 중...")
             h, w = image.shape[:2]
             config = DXFConfig(scale=self.settings.get('scale', 1.0))
-            exporter = ContinuousDXFExporter(config)
+            exporter = DXFExporterContinuous(config)
             exporter.create_document(h)
             exporter.add_all_elements(elements)
             
