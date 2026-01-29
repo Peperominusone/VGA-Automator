@@ -119,7 +119,7 @@ class ConversionWorker(QThread):
             image = preprocessor.load_image(self.image_path)
             
             self.progress.emit(25, "이미지 전처리 중...")
-            preprocessed = preprocessor.preprocess(image)
+            preprocessed = preprocessor.preprocess(self.image_path)
             
             # 2. 요소 추출
             self.progress.emit(40, "건축 요소 감지 중...")
