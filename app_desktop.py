@@ -14,7 +14,8 @@ from PyQt6.QtCore import Qt, QThread, pyqtSignal
 from PyQt6.QtGui import QPixmap, QDragEnterEvent, QDropEvent, QFont
 import cv2
 import numpy as np
-
+import logging
+logging.basicConfig(level=logging.INFO)
 
 class DropZone(QLabel):
     """드래그 앤 드롭 영역"""
@@ -131,8 +132,8 @@ class ConversionWorker(QThread):
                 confidence=self.settings.get('confidence', 0.5)
             )
 
-            print("elements type:", type(elements))
-            print("elements keys:", elements.keys())
+            logging.info(f"elements type: {type(elements)}")
+            logging.info(f"elements keys: {getattr(elements, 'keys', lambda: 'No keys method')()}")
             
             # 통계 수집
             self.progress.emit(70, "윤곽선 처리 중...")
