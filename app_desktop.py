@@ -108,6 +108,7 @@ class ConversionWorker(QThread):
     
     def run(self):
         try:
+            logging.info("=== 변환 시작 (run 함수) ===")
             from src.preprocessor import Preprocessor
             from src.segmentation_detector import ContinuousWallExtractor, ElementType
             from src.dxf_exporter_continuous import DXFExporterContinuous
@@ -125,12 +126,15 @@ class ConversionWorker(QThread):
             # 2. 요소 추출
             self.progress.emit(40, "건축 요소 감지 중...")
             extractor = ContinuousWallExtractor()
+            logging.info("extractor 객체 생성 완료")
+            
             elements = extractor.extract_all_elements(
                 image,
                 preprocessed['binary'],
                 model_path=self.settings.get('model_path', 'best.pt'),
                 confidence=self.settings.get('confidence', 0.5)
             )
+            logging.info("extract_all_elements 호출 완료")
 
             logging.info(f"elements type: {type(elements)}")
             logging.info(f"elements keys: {getattr(elements, 'keys', lambda: 'No keys method')()}")
@@ -161,6 +165,7 @@ class ConversionWorker(QThread):
         except FileNotFoundError as e:
             self.error.emit(f"모델 파일을 찾을 수 없습니다.\n{e}\n\nbest.pt 파일을 프로젝트 폴더에 넣어주세요.")
         except Exception as e:
+            logging.exception("run 함수에서 예외 발생")
             self.error.emit(f"변환 중 오류 발생:\n{str(e)}")
 
 
