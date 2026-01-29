@@ -1,6 +1,7 @@
 """
 VGA-Automator - Floorplan to DXF converter
 """
+
 from .segmentation_detector import (
     ElementType,
     SegmentedElement,
@@ -9,26 +10,22 @@ from .segmentation_detector import (
 )
 from .dxf_exporter_continuous import DXFExporterContinuous
 
-__all__ = [
-    'ElementType',
-    'SegmentedElement',
-    'SegmentationDetector',
-    'ContinuousWallExtractor',
-    'DXFExporterContinuous',
-VGA-Automator: Floor Plan to DXF Converter for Visibility Graph Analysis
-"""
-
-__version__ = "1.0.0"
-__author__ = "VGA-Automator Contributors"
-
 from .preprocessor import Preprocessor
 from .detector import FloorPlanDetector
 from .contour_extractor import ContourExtractor
 from .dxf_exporter import DXFExporter
 
 __all__ = [
+    'ElementType',
+    'SegmentedElement',
+    'SegmentationDetector',
+    'ContinuousWallExtractor',
+    'DXFExporterContinuous',
     'Preprocessor',
     'FloorPlanDetector',
     'ContourExtractor',
     'DXFExporter',
 ]
+
+__version__ = "1.0.0"
+__author__ = "VGA-Automator Contributors"
