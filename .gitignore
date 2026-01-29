@@ -20,6 +20,10 @@ wheels/
 .installed.cfg
 *.egg
 
+# Virtual environments
+venv/
+ENV/
+env/
 # Virtual Environment
 venv/
 env/
@@ -33,6 +37,25 @@ ENV/
 *.swo
 *~
 
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Model files
+*.pt
+*.pth
+*.onnx
+
+# Debug output
+debug_*.png
+output_*.dxf
+*.log
+
+# Temporary files
+tmp/
+temp/
 # Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb_checkpoints/
