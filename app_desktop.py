@@ -15,7 +15,7 @@ from PyQt6.QtGui import QPixmap, QDragEnterEvent, QDropEvent, QFont
 import cv2
 import numpy as np
 import logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, filename="debug.log", encoding="utf-8")
 
 class DropZone(QLabel):
     """드래그 앤 드롭 영역"""
