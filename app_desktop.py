@@ -107,7 +107,7 @@ class ConversionWorker(QThread):
     
     def run(self):
         try:
-            from src.preprocessor import FloorplanPreprocessor
+            from src.preprocessor import Preprocessor
             from src.segmentation_detector import ContinuousWallExtractor, ElementType
             from src.dxf_exporter_continuous import ContinuousDXFExporter, DXFConfig
             
@@ -115,7 +115,7 @@ class ConversionWorker(QThread):
             
             # 1. 이미지 로드 및 전처리
             self.progress.emit(10, "이미지 로드 중...")
-            preprocessor = FloorplanPreprocessor()
+            preprocessor = Preprocessor()
             image = preprocessor.load_image(self.image_path)
             
             self.progress.emit(25, "이미지 전처리 중...")
