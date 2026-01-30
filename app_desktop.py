@@ -132,7 +132,8 @@ class ConversionWorker(QThread):
                 image,
                 preprocessed['binary'],
                 model_path=self.settings.get('model_path', 'best.pt'),
-                confidence=self.settings.get('confidence', 0.5)
+                confidence=self.settings.get('confidence', 0.5),
+                gap_size=self.settings.get('gap_size',15)
             )
             logging.info("extract_all_elements 호출 완료")
 
