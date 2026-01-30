@@ -47,10 +47,11 @@ class SegmentedElement:
 class SegmentationDetector:
     """Segmentation-based floorplan element detector"""
     
-    def __init__(self, model_path: str = "best.pt", confidence: float = 0.5, use_segmentation: bool = True):
+    def __init__(self, model_path: str = "best.pt", confidence: float = 0.5, use_segmentation: bool = True, debug: bool = False):
         self.model_path = model_path
         self.confidence = confidence
         self.use_segmentation = use_segmentation
+        self.debug = debug
         self.model = None
         self._load_model()
     
@@ -59,6 +60,8 @@ class SegmentationDetector:
         if not Path(self.model_path).exists():
             raise FileNotFoundError(f"Model file not found: {self.model_path}")
         self.model = YOLO(self.model_path)
+        if self.debug:
+            print(f"[DEBUG][Model} loaded: {self.model_path} | "f"use_segmentation={self.use_segmentation}")
     
     def detect_with_masks(self, image: np.ndarray, binary: np.ndarray, target_classes: List[str] = None) -> Dict[ElementType, SegmentedElement]:
         if target_classes is None:
@@ -73,6 +76,15 @@ class SegmentationDetector:
                 class_masks[elem_type] = np.zeros((h, w), dtype=np.uint8)
         
         results = self.model.predict(image, conf=self.confidence, verbose=False)
+
+        if sel.debug:
+            print(f"[DEBUG] use_segmentation={self.use_segmentation} | results={len(results)}")
+
+        for r_i, result in enumerate(results):
+            has_masks = hasattr(result,"masks") and (result.masks is not None)
+            if self.debug and self.use_segmentation and not has_masks:
+                print("[WARN] use_segmentation=True but result.masks is None. "
+                      "This model is likely a DET model, not SEG.")
         
         for result in results:
             if hasattr(result, 'masks') and result.masks is not None:
@@ -197,12 +209,13 @@ class ContinuousWallExtractor:
     def __init__(self):
         self.detector = None
     
-    def extract_all_elements(self, image: np.ndarray, binary: np.ndarray, model_path: str = "best.pt", confidence: float = 0.5) -> Dict[ElementType, SegmentedElement]:
+    def extract_all_elements(self, image: np.ndarray, binary: np.ndarray, model_path: str = "best.pt", confidence: float = 0.5, gap_size : int =10, wall_gap_size: int | None = None) -> Dict[ElementType, SegmentedElement]:
         self.detector = SegmentationDetector(model_path=model_path, confidence=confidence)
         elements = self.detector.detect_with_masks(image, binary, target_classes=['Wall', 'Door', 'Window', 'Column', 'Sliding Door'])
         processed = {}
         for elem_type, element in elements.items():
-            element = self.detector.connect_segments(element, gap_size=10)
+            gs = wall_gap_size if (elem_type == ElementType.WALL and wall_gap_size is not None) else gap_size
+            element = self.detector.connect_segments(element, gap_size=gap_size)
             if elem_type == ElementType.WALL:
                 element = self.detector.extract_skeleton(element)
                 element = self.detector.skeleton_to_polylines(element)
