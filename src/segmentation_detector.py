@@ -61,7 +61,7 @@ class SegmentationDetector:
             raise FileNotFoundError(f"Model file not found: {self.model_path}")
         self.model = YOLO(self.model_path)
         if self.debug:
-            print(f"[DEBUG][Model} loaded: {self.model_path} | "f"use_segmentation={self.use_segmentation}")
+            print(f"[DEBUG][Model] loaded: {self.model_path} | "f"use_segmentation={self.use_segmentation}")
     
     def detect_with_masks(self, image: np.ndarray, binary: np.ndarray, target_classes: List[str] = None) -> Dict[ElementType, SegmentedElement]:
         if target_classes is None:
