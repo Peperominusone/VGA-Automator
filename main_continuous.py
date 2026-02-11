@@ -8,8 +8,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from src.segmentation_detector import ContinuousWallExtractor, ElementType
-from src.dxf_exporter_continuous import DXFExporterContinuous
+from src.detection.segmentation_detector import ContinuousWallExtractor, ElementType
+from src.export.dxf_exporter_continuous import DXFExporterContinuous
 
 
 def preprocess_image(image_path: str) -> tuple[np.ndarray, np.ndarray]:

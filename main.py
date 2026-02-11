@@ -9,10 +9,10 @@ import sys
 from pathlib import Path
 import cv2
 
-from src.preprocessor import Preprocessor
-from src.detector import FloorPlanDetector
-from src.contour_extractor import ContourExtractor
-from src.dxf_exporter import DXFExporter
+from src.preprocessing.preprocessor import Preprocessor
+from src.detection.detector import FloorPlanDetector
+from src.postprocessing.contour_extractor import ContourExtractor
+from src.export.dxf_exporter import DXFExporter
 
 
 def main():

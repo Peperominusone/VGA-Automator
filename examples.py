@@ -7,12 +7,12 @@ import numpy as np
 import cv2
 from pathlib import Path
 
-from src.segmentation_detector import (
+from src.detection.segmentation_detector import (
     ContinuousWallExtractor,
     SegmentationDetector,
     ElementType,
 )
-from src.dxf_exporter_continuous import DXFExporterContinuous
+from src.export.dxf_exporter_continuous import DXFExporterContinuous
 
 
 def example_basic_usage():

@@ -11,13 +11,13 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.segmentation_detector import (
+from src.detection.segmentation_detector import (
     ElementType, 
     SegmentedElement, 
     SegmentationDetector,
     SANATLADKAT_CLASS_MAP
 )
-from src.dxf_exporter_continuous import DXFExporterContinuous
+from src.export.dxf_exporter_continuous import DXFExporterContinuous
 
 
 def test_element_type_enum():
