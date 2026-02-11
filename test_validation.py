@@ -11,13 +11,13 @@ from pathlib import Path
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.segmentation_detector import (
+from src.detection.segmentation_detector import (
     ElementType, 
     SegmentedElement, 
     SegmentationDetector,
     SANATLADKAT_CLASS_MAP
 )
-from src.dxf_exporter_continuous import DXFExporterContinuous
+from src.export.dxf_exporter_continuous import DXFExporterContinuous
 
 
 def test_element_type_enum():
@@ -87,7 +87,7 @@ def test_connect_segments():
 def test_merge_polylines():
     """Test polyline merging"""
     print("\nTesting _merge_polylines...")
-    from src.segmentation_detector import SegmentationDetector
+    from src.detection.segmentation_detector import SegmentationDetector
     
     # Create mock polylines that should merge
     line1 = [(0.0, 0.0), (10.0, 0.0)]

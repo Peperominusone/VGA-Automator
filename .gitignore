@@ -87,6 +87,7 @@ temp/
 best.pt
 *.pt
 models/
+!models/.gitkeep
 
 # Output files
 *.dxf
@@ -106,3 +107,7 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.log
+
+# Training data and outputs
+training/data/
+training/runs/

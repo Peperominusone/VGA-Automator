@@ -109,9 +109,9 @@ class ConversionWorker(QThread):
     def run(self):
         try:
             logging.info("=== 변환 시작 (run 함수) ===")
-            from src.preprocessor import Preprocessor
-            from src.segmentation_detector import ContinuousWallExtractor, ElementType
-            from src.dxf_exporter_continuous import DXFExporterContinuous
+            from src.preprocessing.preprocessor import Preprocessor
+            from src.detection.segmentation_detector import ContinuousWallExtractor, ElementType
+            from src.export.dxf_exporter_continuous import DXFExporterContinuous
             
             stats = {'walls': 0, 'doors': 0, 'windows': 0}
             

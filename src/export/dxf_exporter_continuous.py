@@ -7,7 +7,7 @@ from typing import List, Tuple, Dict
 import numpy as np
 from pathlib import Path
 
-from .segmentation_detector import SegmentedElement, ElementType
+from ..detection.segmentation_detector import SegmentedElement, ElementType
 
 
 class DXFExporterContinuous:
