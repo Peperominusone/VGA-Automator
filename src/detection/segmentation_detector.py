@@ -77,7 +77,7 @@ class SegmentationDetector:
         
         results = self.model.predict(image, conf=self.confidence, verbose=False)
 
-        if sel.debug:
+        if self.debug:
             print(f"[DEBUG] use_segmentation={self.use_segmentation} | results={len(results)}")
 
         for r_i, result in enumerate(results):
