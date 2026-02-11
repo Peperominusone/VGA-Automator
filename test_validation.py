@@ -87,7 +87,7 @@ def test_connect_segments():
 def test_merge_polylines():
     """Test polyline merging"""
     print("\nTesting _merge_polylines...")
-    from src.segmentation_detector import SegmentationDetector
+    from src.detection.segmentation_detector import SegmentationDetector
     
     # Create mock polylines that should merge
     line1 = [(0.0, 0.0), (10.0, 0.0)]

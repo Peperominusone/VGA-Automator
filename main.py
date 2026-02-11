@@ -1,267 +1,292 @@
 #!/usr/bin/env python3
 """
-VGA-Automator: Floor Plan to DXF Converter
-Main CLI entry point
+VGA-Automator: Unified CLI for Floor Plan to DXF Conversion and Model Training
 """
 
 import argparse
 import sys
 from pathlib import Path
-import cv2
-
-from src.preprocessing.preprocessor import Preprocessor
-from src.detection.detector import FloorPlanDetector
-from src.postprocessing.contour_extractor import ContourExtractor
-from src.export.dxf_exporter import DXFExporter
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description='Convert floor plan images to DXF format for VGA analysis',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python main.py floorplan.png -o output.dxf
-  python main.py floorplan.jpg -o output.dxf --confidence 0.5 --debug
-  python main.py floorplan.pdf -o output.dxf --model best.pt --scale 10.0
-        """
-    )
+def cmd_infer(args):
+    """Run inference to convert floor plan to DXF"""
+    import cv2
+    from src.preprocessing.preprocessor import Preprocessor
+    from src.detection.segmentation_detector import ContinuousWallExtractor, ElementType
+    from src.export.dxf_exporter_continuous import DXFExporterContinuous
     
-    # Required arguments
-    parser.add_argument(
-        'input',
-        type=str,
-        help='Input floor plan image (PNG, JPG, or PDF)'
-    )
-    
-    # Output options
-    parser.add_argument(
-        '-o', '--output',
-        type=str,
-        default='output.dxf',
-        help='Output DXF file path (default: output.dxf)'
-    )
-    
-    # Model options
-    parser.add_argument(
-        '--model',
-        type=str,
-        default='best.pt',
-        help='Path to YOLOv8 model file (default: best.pt)'
-    )
-    
-    parser.add_argument(
-        '--confidence',
-        type=float,
-        default=0.5,
-        help='Detection confidence threshold (default: 0.5)'
-    )
-    
-    # Processing options
-    parser.add_argument(
-        '--scale',
-        type=float,
-        default=1.0,
-        help='Scale factor from pixels to CAD units (default: 1.0)'
-    )
-    
-    parser.add_argument(
-        '--denoise',
-        type=int,
-        default=10,
-        help='Denoising strength (default: 10)'
-    )
-    
-    parser.add_argument(
-        '--doors-as-walls',
-        action='store_true',
-        help='Treat doors as walls instead of openings (VGA impassable)'
-    )
-    
-    parser.add_argument(
-        '--bbox-only',
-        action='store_true',
-        help='Use bounding boxes instead of detailed contours'
-    )
-    
-    # Debug options
-    parser.add_argument(
-        '--debug',
-        action='store_true',
-        help='Save intermediate debug images'
-    )
-    
-    parser.add_argument(
-        '--no-detection',
-        action='store_true',
-        help='Skip object detection, only preprocess and extract contours'
-    )
-    
-    args = parser.parse_args()
-    
-    # Validate input file
     input_path = Path(args.input)
     if not input_path.exists():
-        print(f"Error: Input file not found: {input_path}")
+        print(f"❌ Error: Input file not found: {input_path}")
         sys.exit(1)
     
     output_path = Path(args.output)
+    model_path = Path(args.model)
+    
+    if not model_path.exists():
+        print(f"❌ Error: Model file not found: {model_path}")
+        print(f"   Please download or train a model and place it at: {model_path}")
+        print(f"   Or specify a different model with --model <path>")
+        sys.exit(1)
     
     print("=" * 60)
     print("VGA-Automator: Floor Plan to DXF Converter")
     print("=" * 60)
     print(f"Input:  {input_path}")
     print(f"Output: {output_path}")
+    print(f"Model:  {model_path}")
     print()
     
     try:
-        # Step 1: Preprocessing
-        print("[1/4] Preprocessing image...")
+        # 1. Load and preprocess image
+        print("[1/3] Loading and preprocessing image...")
         preprocessor = Preprocessor()
-        processed_image = preprocessor.preprocess(
-            input_path,
-            denoise_strength=args.denoise
+        image = preprocessor.load_image(str(input_path))
+        preprocessed = preprocessor.preprocess(str(input_path))
+        print(f"   Image size: {image.shape[1]}x{image.shape[0]}")
+        print("   ✓ Preprocessing complete")
+        
+        # 2. Extract elements
+        print(f"[2/3] Detecting elements (confidence: {args.confidence})...")
+        extractor = ContinuousWallExtractor()
+        elements = extractor.extract_all_elements(
+            image,
+            preprocessed['binary'],
+            model_path=str(model_path),
+            confidence=args.confidence,
+            gap_size=args.gap
         )
         
+        # Result summary
+        print("   Detected elements:")
+        for elem_type, element in elements.items():
+            if elem_type == ElementType.WALL:
+                count = len(element.polylines)
+                print(f"      - {elem_type.value}: {count} polylines")
+            else:
+                count = len(element.contours)
+                print(f"      - {elem_type.value}: {count} contours")
+        
+        if not elements:
+            print("   ⚠️  No elements detected.")
+        
+        print("   ✓ Detection complete")
+        
+        # 3. Export to DXF
+        print(f"[3/3] Exporting to DXF...")
+        exporter = DXFExporterContinuous(str(output_path))
+        exporter.export_elements(elements, image_height=image.shape[0])
+        exporter.save()
+        print("   ✓ DXF export complete")
+        
+        # 4. Save debug images if requested
         if args.debug:
-            debug_dir = Path('debug_output')
-            debug_dir.mkdir(exist_ok=True)
-            preprocessor.save_image(processed_image, debug_dir / '1_preprocessed.png')
-            print(f"  Saved preprocessed image to {debug_dir / '1_preprocessed.png'}")
+            debug_dir = output_path.parent / f"{output_path.stem}_debug"
+            print(f"\n   Saving debug images to: {debug_dir}")
+            debug_dir.mkdir(parents=True, exist_ok=True)
+            
+            for elem_type, element in elements.items():
+                # Save mask
+                mask_path = debug_dir / f"{elem_type.value}_mask.png"
+                cv2.imwrite(str(mask_path), element.mask)
+            print("   ✓ Debug images saved")
         
-        print("  ✓ Preprocessing complete")
-        
-        # Get original image for detection
-        original_image = preprocessor.original_image
-        
-        if args.no_detection:
-            # Skip detection, just extract contours from preprocessed image
-            print("[2/4] Object detection skipped")
-            print("[3/4] Extracting contours from preprocessed image...")
-            
-            extractor = ContourExtractor()
-            contours = extractor.find_contours(processed_image, min_area=100)
-            simplified = extractor.simplify_contours(contours)
-            lines = extractor.extract_lines_from_contours(simplified, min_length=10)
-            
-            print(f"  Extracted {len(lines)} lines")
-            
-            if args.debug:
-                vis = extractor.visualize_lines(original_image, lines)
-                cv2.imwrite(str(debug_dir / '3_lines.png'), vis)
-                print(f"  Saved line visualization to {debug_dir / '3_lines.png'}")
-            
-            print("  ✓ Contour extraction complete")
-            
-            # Export to DXF
-            print("[4/4] Exporting to DXF...")
-            exporter = DXFExporter(
-                image_height=original_image.shape[0],
-                scale_factor=args.scale
-            )
-            exporter.export_from_lines(
-                lines,
-                original_image.shape[0],
-                output_path
-            )
-            
-        else:
-            # Step 2: Object Detection
-            print("[2/4] Detecting objects with YOLOv8...")
-            
-            # Check if model file exists
-            model_path = Path(args.model)
-            if not model_path.exists():
-                print(f"\nError: Model file not found: {model_path}")
-                print("\nPlease download the model from:")
-                print("https://github.com/sanatladkat/floor-plan-object-detection")
-                print("\nOr use --no-detection flag to skip object detection")
-                sys.exit(1)
-            
-            detector = FloorPlanDetector(
-                model_path=args.model,
-                confidence=args.confidence
-            )
-            
-            detections = detector.detect(original_image)
-            
-            print(f"  Detected {len(detections)} objects:")
-            class_counts = {}
-            for det in detections:
-                class_name = det['class_name']
-                class_counts[class_name] = class_counts.get(class_name, 0) + 1
-            
-            for class_name, count in sorted(class_counts.items()):
-                print(f"    - {class_name}: {count}")
-            
-            if args.debug:
-                vis = detector.visualize_detections(original_image)
-                cv2.imwrite(str(debug_dir / '2_detections.png'), vis)
-                print(f"  Saved detection visualization to {debug_dir / '2_detections.png'}")
-            
-            print("  ✓ Detection complete")
-            
-            # Step 3: Extract contours/lines (optional, for additional detail)
-            print("[3/4] Extracting additional contours...")
-            
-            # Extract lines from wall detections
-            wall_detections = detector.filter_detections_by_class(['Wall', 'Curtain Wall'])
-            lines = detector.extract_lines_from_walls(
-                processed_image,
-                wall_detections,
-                threshold=50,
-                min_line_length=30,
-                max_line_gap=10
-            )
-            
-            print(f"  Extracted {len(lines)} wall lines")
-            
-            if args.debug and lines:
-                extractor = ContourExtractor()
-                vis = extractor.visualize_lines(original_image, lines)
-                cv2.imwrite(str(debug_dir / '3_wall_lines.png'), vis)
-                print(f"  Saved wall lines to {debug_dir / '3_wall_lines.png'}")
-            
-            print("  ✓ Contour extraction complete")
-            
-            # Step 4: Export to DXF
-            print("[4/4] Exporting to DXF...")
-            exporter = DXFExporter(
-                image_height=original_image.shape[0],
-                scale_factor=args.scale
-            )
-            
-            # Export detections
-            exporter.export_from_detections(
-                detections,
-                original_image,
-                output_path,
-                doors_as_openings=not args.doors_as_walls,
-                as_bbox=args.bbox_only
-            )
-            
-            # Optionally add extracted lines to the same DXF
-            # (could be added to a separate layer if needed)
-            
-        print("  ✓ DXF export complete")
         print()
         print("=" * 60)
-        print(f"✓ SUCCESS: DXF file created at {output_path}")
+        print(f"✅ SUCCESS: DXF file created at {output_path}")
         print("=" * 60)
-        print()
-        print("Next steps:")
-        print("  1. Open the DXF file in AutoCAD or similar CAD software")
-        print("  2. Import to depthmapX or other VGA analysis tool")
-        print("  3. Run Visibility Graph Analysis")
         
-    except FileNotFoundError as e:
-        print(f"\n✗ Error: {e}")
-        sys.exit(1)
     except Exception as e:
-        print(f"\n✗ Error: {e}")
+        print(f"\n❌ Error: {e}")
         if args.debug:
             import traceback
             traceback.print_exc()
+        sys.exit(1)
+
+
+def cmd_train(args):
+    """Train YOLOv8 segmentation model"""
+    from ultralytics import YOLO
+    
+    data_yaml = Path(args.data)
+    if not data_yaml.exists():
+        print(f"❌ Error: Data YAML file not found: {data_yaml}")
+        print("\n   To prepare training data, run:")
+        print(f"   python main.py convert --cubicasa_root <path> --out_root training/data/yolo")
+        sys.exit(1)
+    
+    print("=" * 60)
+    print("VGA-Automator: Model Training")
+    print("=" * 60)
+    print(f"Data:    {data_yaml}")
+    print(f"Model:   {args.model}")
+    print(f"Epochs:  {args.epochs}")
+    print(f"Batch:   {args.batch}")
+    print(f"ImgSize: {args.imgsz}")
+    print()
+    
+    try:
+        model = YOLO(args.model)
+        results = model.train(
+            data=str(data_yaml),
+            imgsz=args.imgsz,
+            epochs=args.epochs,
+            batch=args.batch,
+            device=args.device,
+            project=args.project,
+            name=args.name,
+        )
+        
+        print("\n" + "=" * 60)
+        print("✅ Training complete!")
+        print(f"   Weights saved to: {args.project}/{args.name}/weights/")
+        print("=" * 60)
+        
+    except Exception as e:
+        print(f"\n❌ Training error: {e}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+
+def cmd_convert(args):
+    """Convert CubiCasa5k dataset to YOLO-seg format"""
+    import json
+    import yaml
+    from pathlib import Path
+    from tqdm import tqdm
+    
+    cubicasa_root = Path(args.cubicasa_root)
+    out_root = Path(args.out_root)
+    
+    if not cubicasa_root.exists():
+        print(f"❌ Error: CubiCasa5k directory not found: {cubicasa_root}")
+        sys.exit(1)
+    
+    print("=" * 60)
+    print("VGA-Automator: Dataset Conversion")
+    print("=" * 60)
+    print(f"Input:  {cubicasa_root}")
+    print(f"Output: {out_root}")
+    print()
+    
+    # Load class configuration
+    class_config_path = Path(__file__).parent / "training" / "configs" / "classes.json"
+    if not class_config_path.exists():
+        print(f"❌ Error: Class config not found: {class_config_path}")
+        sys.exit(1)
+    
+    with open(class_config_path, 'r') as f:
+        class_config = json.load(f)
+    
+    print("⚠️  Note: This is a skeleton converter.")
+    print("   CubiCasa5k SVG parsing needs to be implemented in:")
+    print(f"   {Path(__file__).parent / 'training' / 'scripts' / 'convert_cubicasa_to_yolo_seg.py'}")
+    print()
+    print("   The converter will create the directory structure and data.yaml,")
+    print("   but you need to implement SVG parsing for your specific dataset.")
+    print()
+    
+    # Create output directories
+    for split in args.splits:
+        (out_root / "images" / split).mkdir(parents=True, exist_ok=True)
+        (out_root / "labels" / split).mkdir(parents=True, exist_ok=True)
+        print(f"✓ Created directory: {out_root / 'images' / split}")
+        print(f"✓ Created directory: {out_root / 'labels' / split}")
+    
+    # Create data.yaml
+    data_yaml = {
+        "path": str(out_root.absolute()),
+        "train": "images/train",
+        "val": "images/val",
+        "names": {i: name for i, name in enumerate(class_config["names"])}
+    }
+    
+    yaml_path = out_root / "data.yaml"
+    with open(yaml_path, 'w') as f:
+        yaml.safe_dump(data_yaml, f, sort_keys=False, allow_unicode=True)
+    
+    print(f"\n✓ Created data.yaml: {yaml_path}")
+    print("\n" + "=" * 60)
+    print("✅ Directory structure created!")
+    print("=" * 60)
+    print("\nNext steps:")
+    print("1. Implement SVG parsing in training/scripts/convert_cubicasa_to_yolo_seg.py")
+    print("2. Run the full conversion script")
+    print("3. Verify the generated labels in the output directory")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        prog='VGA-Automator',
+        description='Floor Plan to DXF Converter with Model Training',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Inference (convert floor plan to DXF)
+  python main.py infer floorplan.png -o output.dxf
+  python main.py infer floorplan.png -o output.dxf --model models/best.pt --confidence 0.6
+  
+  # Training (train YOLOv8-seg model)
+  python main.py train --data training/data/yolo/data.yaml --epochs 100
+  python main.py train --data training/data/yolo/data.yaml --model yolov8m-seg.pt --batch 16
+  
+  # Dataset conversion (CubiCasa5k to YOLO format)
+  python main.py convert --cubicasa_root data/raw/CubiCasa5k --out_root training/data/yolo
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest='command', help='Command to run')
+    
+    # Infer command
+    infer_parser = subparsers.add_parser(
+        'infer',
+        help='Convert floor plan image to DXF',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    infer_parser.add_argument('input', help='Input floor plan image (PNG, JPG, PDF)')
+    infer_parser.add_argument('-o', '--output', default='output.dxf', help='Output DXF file (default: output.dxf)')
+    infer_parser.add_argument('--model', default='models/best.pt', help='YOLOv8-seg model file (default: models/best.pt)')
+    infer_parser.add_argument('--confidence', type=float, default=0.5, help='Detection confidence (default: 0.5)')
+    infer_parser.add_argument('--gap', type=int, default=10, help='Gap size for connecting segments (default: 10)')
+    infer_parser.add_argument('--debug', action='store_true', help='Save debug images')
+    
+    # Train command
+    train_parser = subparsers.add_parser(
+        'train',
+        help='Train YOLOv8 segmentation model',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    train_parser.add_argument('--data', required=True, help='Path to data.yaml')
+    train_parser.add_argument('--model', default='yolov8n-seg.pt', help='Base model (default: yolov8n-seg.pt)')
+    train_parser.add_argument('--imgsz', type=int, default=1024, help='Image size (default: 1024)')
+    train_parser.add_argument('--epochs', type=int, default=100, help='Training epochs (default: 100)')
+    train_parser.add_argument('--batch', type=int, default=8, help='Batch size (default: 8)')
+    train_parser.add_argument('--device', default=None, help='Device (e.g., 0 or cpu)')
+    train_parser.add_argument('--project', default='training/runs/segment', help='Project directory')
+    train_parser.add_argument('--name', default='vga_yolov8seg', help='Run name')
+    
+    # Convert command
+    convert_parser = subparsers.add_parser(
+        'convert',
+        help='Convert CubiCasa5k to YOLO-seg format',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    convert_parser.add_argument('--cubicasa_root', required=True, help='CubiCasa5k root directory')
+    convert_parser.add_argument('--out_root', required=True, help='Output directory for YOLO-seg dataset')
+    convert_parser.add_argument('--splits', nargs='+', default=['train', 'val'], help='Dataset splits (default: train val)')
+    
+    args = parser.parse_args()
+    
+    if args.command == 'infer':
+        cmd_infer(args)
+    elif args.command == 'train':
+        cmd_train(args)
+    elif args.command == 'convert':
+        cmd_convert(args)
+    else:
+        parser.print_help()
+        print("\n❌ Error: Please specify a command (infer, train, or convert)")
         sys.exit(1)
 
 
